@@ -12,7 +12,11 @@ A pre-built jar file can be found in the ```./target``` folder. The project cont
 
 If there is a particular version of Solr you need this for, please create a GitHub issue and I'll see what I can do.
 To manually compile it for a specific version, use maven to compile the plugins using the pom.xml file, and update the versions of the solr and lucene libraries in that file, and use maven to pull in those dependencies. Then fix any compilation errors.
+
+This is the command to package the jar:
  
+mvn package
+
 ## Importing into SOLR
 Please see the official SOLR guidelines for registering plugins with solr. This basically involves simply dropping the jar file into one of the folders that Solr checks for class and jar files on core reload.  
 
