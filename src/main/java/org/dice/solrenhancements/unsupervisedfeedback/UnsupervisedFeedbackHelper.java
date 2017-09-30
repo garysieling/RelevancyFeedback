@@ -4,12 +4,12 @@ package org.dice.solrenhancements.unsupervisedfeedback;
  * Created by simon.hughes on 9/2/14.
  */
 
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.queries.function.BoostedQuery;
 import org.apache.lucene.queries.function.FunctionQuery;
 import org.apache.lucene.queries.function.ValueSource;
 import org.apache.lucene.queries.function.valuesource.QueryValueSource;
-import org.apache.lucene.queries.payloads.PayloadTermQuery;
 import org.apache.lucene.search.*;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.params.FacetParams;
@@ -109,8 +109,9 @@ public class UnsupervisedFeedbackHelper
 
     public DocListAndSet expandQueryAndReExecute(DocIterator iterator, Query seedQuery, int start, int rows, List<Query> filters, List<InterestingTerm> terms, int flags, Sort lsort) throws IOException, SyntaxError
     {
-        rawUFQuery = new BooleanQuery();
-        rawUFQuery.add(seedQuery, BooleanClause.Occur.MUST);
+
+        BooleanQuery.Builder rawUFQueryBuilder = new BooleanQuery.Builder();
+        rawUFQueryBuilder.add(seedQuery, BooleanClause.Occur.MUST);
 
         List<Integer> ids = new ArrayList<Integer>();
         while(iterator.hasNext()) {
@@ -118,16 +119,20 @@ public class UnsupervisedFeedbackHelper
         }
         // expand original query from matched documents
         BooleanQuery expansionQuery = uf.queryFromDocuments(ids);
-        rawUFQuery.add(expansionQuery, BooleanClause.Occur.SHOULD);
+        rawUFQueryBuilder.add(expansionQuery, BooleanClause.Occur.SHOULD);
 
         // only boost final query, not seed query (don't want to filter expansion query)
         boostedUfQuery = getBoostedFunctionQuery(rawUFQuery);
         if( terms != null ) {
             fillInterestingTermsFromUfQuery(expansionQuery, terms);
         }
-        realUFQuery = new BooleanQuery();
+        rawUFQuery = rawUFQueryBuilder.build();
+
+        BooleanQuery.Builder realUFQueryBuilder =  new BooleanQuery.Builder();
         // exclude current document from results
-        realUFQuery.add(boostedUfQuery, BooleanClause.Occur.MUST);
+        realUFQueryBuilder.add(boostedUfQuery, BooleanClause.Occur.MUST);
+
+        realUFQuery = realUFQueryBuilder.build();
 
         DocListAndSet results = new DocListAndSet();
         if (this.needDocSet) {
@@ -147,11 +152,14 @@ public class UnsupervisedFeedbackHelper
             if(qry instanceof TermQuery) {
                 TermQuery tq = (TermQuery)qry;
                 it.term = tq.getTerm();
+            } else {
+                throw new NotImplementedException(qry.getClass());
             }
-            else if(qry instanceof PayloadTermQuery) {
+            // TODO
+            /*else if(qry instanceof PayloadTermQuery) {
                 PayloadTermQuery ptq = (PayloadTermQuery)qry;
                 it.term = ptq.getTerm();
-            }
+            }*/
             it.boost = qry.getBoost();
             terms.add(it);
         }

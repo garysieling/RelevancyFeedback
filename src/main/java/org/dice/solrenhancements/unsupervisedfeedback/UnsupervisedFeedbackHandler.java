@@ -87,7 +87,7 @@ public class UnsupervisedFeedbackHandler extends RequestHandlerBase
 
             parser = QParser.getParser(q, defType, req);
             query = parser.getQuery();
-            sortSpec = parser.getSort(true);
+            sortSpec = parser.getSortSpec(true);
 
             targetFqFilters = getFilters(req, CommonParams.FQ);
             //ufFqFilters    = getFilters(req, UnsupervisedFeedbackParams.FQ);
@@ -208,10 +208,11 @@ public class UnsupervisedFeedbackHandler extends RequestHandlerBase
         if( ufDocs.docSet == null ) {
             rsp.add( "facet_counts", null );
         }
-        else {
+        // TODO
+        /*else {
             SimpleFacets f = new SimpleFacets(req, ufDocs.docSet, params );
             rsp.add( "facet_counts", f.getFacetCounts() );
-        }
+        }*/
     }
 
     private void addDebugInfo(SolrQueryRequest req, SolrQueryResponse rsp, String q, List<Query> ufFqFilters, UnsupervisedFeedbackHelper ufhelper, DocListAndSet ufDocs) {
@@ -274,18 +275,5 @@ public class UnsupervisedFeedbackHandler extends RequestHandlerBase
     @Override
     public String getDescription() {
         return "Solr RelevancyFeedback";
-    }
-
-    @Override
-    public String getSource() {
-        return "$URL$";
-    }
-
-    @Override
-    public URL[] getDocs() {
-        try {
-            return new URL[] { new URL("http://wiki.apache.org/solr/RelevancyFeedback") };
-        }
-        catch( MalformedURLException ex ) { return null; }
     }
 }

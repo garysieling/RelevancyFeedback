@@ -18,7 +18,7 @@
 package org.dice.solrenhancements.relevancyfeedback;
 
 import com.google.common.base.Strings;
-import org.apache.lucene.queries.payloads.PayloadTermQuery;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
@@ -102,11 +102,11 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
             if (rfQ != null) {
                 rfQueryParser = QParser.getParser(rfQ, rfDefType, req);
                 rfQuery = rfQueryParser.getQuery();
-                sortSpec = rfQueryParser.getSort(true);
+                sortSpec = rfQueryParser.getSortSpec(true);
             }
             else{
                 rfQueryParser = QParser.getParser(null, rfDefType, req);
-                sortSpec = rfQueryParser.getSort(true);
+                sortSpec = rfQueryParser.getSortSpec(true);
             }
 
             targetFqFilters = getFilters(req, CommonParams.FQ);
@@ -253,11 +253,14 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
             if(q instanceof TermQuery) {
                 TermQuery tq = (TermQuery)q;
                 it.term = tq.getTerm();
+            } else {
+                // TODO
+                throw new NotImplementedException(q.getClass());
             }
-            else if(q instanceof PayloadTermQuery){
+            /*else if(q instanceof PayloadTermQuery){
                 PayloadTermQuery ptq = (PayloadTermQuery)q;
                 it.term = ptq.getTerm();
-            }
+            }*/
             terms.add(it);
         }
         Collections.sort(terms, InterestingTerm.BOOST_ORDER);
@@ -393,47 +396,5 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
     @Override
     public String getDescription() {
         return "Dice custom RelevancyFeedback handler";
-    }
-
-    @Override
-    public String getSource() {
-        return "$URL$";
-    }
-
-    @Override
-    public String getVersion(){
-
-        if (version != null) return version;
-        Enumeration<URL> resources;
-        StringBuilder stringBuilder = new StringBuilder();
-        try {
-            resources = getClass().getClassLoader().getResources("META-INF/MANIFEST.MF");
-            while (resources.hasMoreElements()) {
-                URL url = resources.nextElement();
-                /* let's not read other jar's manifests */
-                if (!url.toString().contains("DiceRelevancyFeedback-1.0.jar")) continue;
-                InputStream reader = url.openStream();
-                while(reader.available() > 0) {
-                    char c = (char) reader.read();
-                    stringBuilder.append(c);
-                    /* skip lines that don't contain the built-date */
-                    if (stringBuilder.toString().contains(System.getProperty("line.separator")) &&
-                            !stringBuilder.toString().contains("Built-Date")) stringBuilder.setLength(0);
-                }
-            }
-        } catch (Exception e) {
-            return "Error reading manifest!";
-        }
-        version = stringBuilder.toString();
-        return stringBuilder.toString();
-    };
-
-
-    @Override
-    public URL[] getDocs() {
-        try {
-            return new URL[] { new URL("http://wiki.apache.org/solr/RelevancyFeedback") };
-        }
-        catch( MalformedURLException ex ) { return null; }
     }
 }

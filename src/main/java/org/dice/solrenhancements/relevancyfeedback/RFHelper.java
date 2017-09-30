@@ -160,7 +160,7 @@ public class RFHelper
 
     public RFResult getMatchesFromDocs(DocIterator iterator, int start, int rows, List<Query> filters, int flags, Sort lsort, Query userQuery) throws IOException, SyntaxError
     {
-        realRFQuery = new BooleanQuery();
+        BooleanQuery.Builder realRFQueryBuilder = new BooleanQuery.Builder();
         List<Integer> ids = new ArrayList<Integer>();
 
         while(iterator.hasNext()) {
@@ -170,7 +170,7 @@ public class RFHelper
 
             // add exclusion filters to prevent matching seed documents
             TermQuery tq = new TermQuery(new Term(uniqueKeyField.getName(), uniqueKeyField.getType().storedToIndexed(doc.getField(uniqueKeyField.getName()))));
-            realRFQuery.add(tq, BooleanClause.Occur.MUST_NOT);
+            realRFQueryBuilder.add(tq, BooleanClause.Occur.MUST_NOT);
         }
 
         RFResult RFResult = rf.like(ids);
@@ -183,14 +183,18 @@ public class RFHelper
         }
 
         boostedRFQuery = getBoostedFunctionQuery(rawRFQuery);
-        realRFQuery.add(boostedRFQuery, BooleanClause.Occur.MUST);
+        realRFQueryBuilder.add(boostedRFQuery, BooleanClause.Occur.MUST);
+
+        realRFQuery = realRFQueryBuilder.build();
 
         BooleanQuery finalQuery = null;
 
         if(userQuery != null){
-            finalQuery = new BooleanQuery();
-            finalQuery.add(userQuery, BooleanClause.Occur.MUST);
-            finalQuery.add(realRFQuery, BooleanClause.Occur.SHOULD);
+            BooleanQuery.Builder finalQueryBuilder = new BooleanQuery.Builder();
+            finalQueryBuilder.add(userQuery, BooleanClause.Occur.MUST);
+            finalQueryBuilder.add(realRFQuery, BooleanClause.Occur.SHOULD);
+
+            finalQuery = finalQueryBuilder.build();
         }
         else{
             finalQuery = realRFQuery;
@@ -217,10 +221,10 @@ public class RFHelper
 
         Query finalQuery = null;
         if(userQuery != null){
-            BooleanQuery tmpQuery = new BooleanQuery();
-            tmpQuery .add(userQuery, BooleanClause.Occur.MUST);
-            tmpQuery .add(boostedRFQuery, BooleanClause.Occur.SHOULD);
-            finalQuery = tmpQuery;
+            BooleanQuery.Builder tmpQuery = new BooleanQuery.Builder();
+            tmpQuery.add(userQuery, BooleanClause.Occur.MUST);
+            tmpQuery.add(boostedRFQuery, BooleanClause.Occur.SHOULD);
+            finalQuery = tmpQuery.build();
         }
         else{
             finalQuery = boostedRFQuery;

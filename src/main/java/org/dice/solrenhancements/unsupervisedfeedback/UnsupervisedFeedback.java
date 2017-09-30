@@ -26,13 +26,12 @@ import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.*;
+import org.apache.lucene.misc.SweetSpotSimilarity;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.queries.payloads.AveragePayloadFunction;
-import org.apache.lucene.queries.payloads.PayloadTermQuery;
-import org.apache.lucene.search.similarities.DefaultSimilarity;
 import org.apache.lucene.search.similarities.TFIDFSimilarity;
 import org.apache.lucene.util.*;
 import org.apache.lucene.util.PriorityQueue;
@@ -337,7 +336,8 @@ public final class UnsupervisedFeedback {
      * Constructor requiring an IndexReader.
      */
     public UnsupervisedFeedback(IndexReader ir) {
-        this(ir, new DefaultSimilarity());
+        // TODO - Not sure what "DefaultSimilarity" was evaluating to before
+        this(ir, new SweetSpotSimilarity());
     }
 
     public UnsupervisedFeedback(IndexReader ir, TFIDFSimilarity sim) {
@@ -672,13 +672,14 @@ public final class UnsupervisedFeedback {
             retrieveTerms(docNum, fieldTermFreq);
         }
 
-        BooleanQuery query = new BooleanQuery();
+        BooleanQuery.Builder query = new BooleanQuery.Builder();
         for(String fieldName: fieldTermFreq.keySet()){
             Map<String,Flt> words = fieldTermFreq.get(fieldName);
             PriorityQueue<USField> queue = createQueue(fieldName, words);
             buildQueryForField(fieldName, queue, query);
         }
-        return query;
+
+        return query.build();
     }
 
     /**
@@ -699,14 +700,14 @@ public final class UnsupervisedFeedback {
      * Create the More queryFromDocuments query from a PriorityQueue
      */
     private Query createQueryForField(String fieldName, PriorityQueue<USField> q) {
-        BooleanQuery query = new BooleanQuery();
+        BooleanQuery.Builder query = new BooleanQuery.Builder();
         return buildQueryForField(fieldName, q, query);
     }
 
     /**
      * Build the More queryFromDocuments query from a PriorityQueue and an initial Boolean query
      */
-    private Query buildQueryForField(String fieldName, PriorityQueue<USField> q, BooleanQuery query) {
+    private Query buildQueryForField(String fieldName, PriorityQueue<USField> q, BooleanQuery.Builder query) {
 
         USField cur;
         int qterms = 0;
@@ -716,19 +717,20 @@ public final class UnsupervisedFeedback {
         }
 
         // to store temporary query so we can later normalize
-        BooleanQuery tmpQuery = new BooleanQuery();
+        BooleanQuery.Builder tmpQuery = new BooleanQuery.Builder();
         double sumQuaredBoost = 0.0f;
         // build temp subquery while computing vector length of query for fields from boosts
         while ((cur = q.pop()) != null) {
 
-            Query tq = null;
+            TermQuery tq = null;
             final Term term = new Term(cur.getFieldName(), cur.getWord());
             if(isPayloadField(cur.getFieldName())){
-                tq = new PayloadTermQuery(term, new AveragePayloadFunction(), true);
+                tq = new PayloadScoreQuery(term, new AveragePayloadFunction(), true);
             }
             else{
                 tq = new TermQuery(term);
             }
+
 
             // always boost
             float boost = cur.getScore();
@@ -750,14 +752,14 @@ public final class UnsupervisedFeedback {
 
         double vectorLength = Math.sqrt(sumQuaredBoost);
         if(vectorLength <= 0.0){
-            return query;
+            return query.build();
         }
 
         buildBoostedNormalizedQuery(fieldName, tmpQuery, query, vectorLength);
-        return query;
+        return query.build();
     }
 
-    private double buildBoostedNormalizedQuery(String fieldName, BooleanQuery tmpQuery, BooleanQuery outQuery, double vectorLength) {
+    private double buildBoostedNormalizedQuery(String fieldName, BooleanQuery.Builder tmpQuery, BooleanQuery.Builder outQuery, double vectorLength) {
         double denominator = (this.isNormalizeFieldBoosts()? vectorLength : 1.0d);
         Float termBoost = this.getBoostFields().get(fieldName);
         if(termBoost == null){
@@ -765,7 +767,7 @@ public final class UnsupervisedFeedback {
         }
 
         double normalizedLength = 0.0f;
-        for(BooleanClause clause: tmpQuery.clauses()){
+        for(BooleanClause clause: tmpQuery.build().clauses()){
             Query termQuery = (clause).getQuery();
             // note that this needs to be applied here, so that the length of the query equals the term boost
 

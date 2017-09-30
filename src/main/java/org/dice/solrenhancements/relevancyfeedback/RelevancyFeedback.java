@@ -27,13 +27,12 @@ import org.apache.lucene.analysis.tokenattributes.PayloadAttribute;
 import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.*;
+import org.apache.lucene.misc.SweetSpotSimilarity;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.queries.payloads.AveragePayloadFunction;
-import org.apache.lucene.queries.payloads.PayloadTermQuery;
-import org.apache.lucene.search.similarities.DefaultSimilarity;
 import org.apache.lucene.search.similarities.TFIDFSimilarity;
 import org.apache.lucene.util.*;
 import org.apache.lucene.util.PriorityQueue;
@@ -391,7 +390,8 @@ public final class RelevancyFeedback {
      * Constructor requiring an IndexReader.
      */
     public RelevancyFeedback(IndexReader ir) {
-        this(ir, new DefaultSimilarity());
+        // TODO - Not sure what this was evaluating to before
+        this(ir, new SweetSpotSimilarity());
     }
 
     public RelevancyFeedback(IndexReader ir, TFIDFSimilarity sim) {
@@ -1022,7 +1022,7 @@ public final class RelevancyFeedback {
         return new RFResult(interestingTerms, query);
     }
 
-    private void buildBoostedNormalizedQuery(String fieldName, BooleanQuery tmpQuery, BooleanQuery outQuery, double vectorLength, boolean contentStreamQuery) {
+    private void buildBoostedNormalizedQuery(String fieldName, BooleanQuery tmpQuery, BooleanQuery.Builder outQuery, double vectorLength, boolean contentStreamQuery) {
         double denominator = (this.isNormalizeFieldBoosts()? vectorLength : 1.0d);
         float fieldBoost = 0.0f;
         if(contentStreamQuery){
@@ -1122,7 +1122,7 @@ public final class RelevancyFeedback {
     }
 
     private Query buildMustMatchQuery(Map<String,Map<String, Flt>> fieldValues, boolean match){
-        BooleanQuery query = new BooleanQuery();
+        BooleanQuery.Builder query = new BooleanQuery.Builder();
         for(Map.Entry<String,Map<String,Flt>> entry: fieldValues.entrySet()){
             String fieldName = entry.getKey();
             for(Map.Entry<String,Flt> fieldValue: entry.getValue().entrySet()){
@@ -1136,7 +1136,8 @@ public final class RelevancyFeedback {
                 }
             }
         }
-        return query;
+
+        return query.build();
     }
 
     /**
