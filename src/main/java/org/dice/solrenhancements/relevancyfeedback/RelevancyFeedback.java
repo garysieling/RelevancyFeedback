@@ -947,9 +947,10 @@ public final class RelevancyFeedback {
     }
 
     private RFResult buildQueryFromFieldTermFrequencies(Map<String, Map<String, Flt>> fieldTermFreq, boolean contentStreamQuery) throws IOException {
-        BooleanQuery query = new BooleanQuery();
+        BooleanQuery.Builder query = new BooleanQuery.Builder();
         List<RFTerm> interestingTerms = new ArrayList<RFTerm>();
-        RFResult RFResult = new RFResult(interestingTerms, query);
+
+        RFResult RFResult = new RFResult(interestingTerms, query.build());
 
         for(String fieldName: fieldTermFreq.keySet()){
             Map<String,Flt> words = fieldTermFreq.get(fieldName);
@@ -958,14 +959,15 @@ public final class RelevancyFeedback {
             RFResult fieldRFResult = buildQueryForField(fieldName, queue, query, contentStreamQuery);
             RFResult.RFTerms.addAll(fieldRFResult.RFTerms);
         }
-        RFResult.rawRFQuery = SolrPluginUtils.setMinShouldMatch(query, getMm());
+
+        RFResult.rawRFQuery = SolrPluginUtils.setMinShouldMatch(query.build(), getMm());
         return RFResult;
     }
 
     /**
      * Build the More queryFromDocuments query from a PriorityQueue and an initial Boolean query
      */
-    private RFResult buildQueryForField(String fieldName, PriorityQueue<RFTerm> q, BooleanQuery query, boolean contentStreamQuery) {
+    private RFResult buildQueryForField(String fieldName, PriorityQueue<RFTerm> q, BooleanQuery.Builder query, boolean contentStreamQuery) {
 
         List<RFTerm> interestingTerms = new ArrayList<RFTerm>();
         int qterms = 0;
@@ -975,7 +977,7 @@ public final class RelevancyFeedback {
         }
 
         // to store temporary query so we can later normalize
-        BooleanQuery tmpQuery = new BooleanQuery();
+        BooleanQuery.Builder tmpQuery = new BooleanQuery.Builder();
         double sumQuaredBoost = 0.0f;
         RFTerm cur;
         // build temp subquery while computing vector length of query for fields from boosts
@@ -1015,11 +1017,11 @@ public final class RelevancyFeedback {
 
         double vectorLength = Math.sqrt(sumQuaredBoost);
         if(vectorLength <= 0.0){
-            return new RFResult(interestingTerms, query);
+            return new RFResult(interestingTerms, query.build());
         }
 
-        buildBoostedNormalizedQuery(fieldName, tmpQuery, query, vectorLength, contentStreamQuery);
-        return new RFResult(interestingTerms, query);
+        buildBoostedNormalizedQuery(fieldName, tmpQuery.build(), query, vectorLength, contentStreamQuery);
+        return new RFResult(interestingTerms, query.build());
     }
 
     private void buildBoostedNormalizedQuery(String fieldName, BooleanQuery tmpQuery, BooleanQuery.Builder outQuery, double vectorLength, boolean contentStreamQuery) {
